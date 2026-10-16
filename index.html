@@ -1299,7 +1299,7 @@ function tipsData() {
     e: 'Aeon Tân An: 210.082.500 ÷ 16 = 13.130.156 đ/ngày; YTD 3.847.174.000 ÷ 268 = 14.355.127 đ/ngày → −8,5%.'
   },
   view: {
-    f: 'Theo timeline: mọi bill trong ngày × cửa hàng chương trình, Số bill = Power BI [Số Bill]. Bill tham gia CT: chỉ chứng từ Augges (≥1 dòng hàng) thỏa ít nhất một điều kiện của chương trình: có mã CTKM (SlBlM.ID_CSB hoặc SlBlD.ID_CSB), có dòng quà giá 0 đúng mã GWP, hoặc (với CT giảm giá) có dòng bán được giảm Tien_Giam + Tien_CK > 0. Ở góc nhìn này Số bill = số chứng từ; mọi thẻ, bảng, chi phí, chuyển đổi tính lại; chuẩn vẫn là mọi bill. Tồn kho và MOH90 không đổi.',
+    f: 'Theo timeline: mọi bill trong ngày × cửa hàng chương trình, Số bill = Power BI [Số Bill]. Bill tham gia CT: chỉ chứng từ Augges (≥1 dòng hàng) thỏa ít nhất một điều kiện của chương trình: có mã CTKM (SlBlM.ID_CSB hoặc SlBlD.ID_CSB), có dòng quà giá 0 đúng mã GWP, hoặc (với CT giảm giá) có dòng bán được giảm Tien_Giam + Tien_CK > 0. Ở góc nhìn này Số bill = số chứng từ; mọi thẻ, bảng, chi phí, chuyển đổi tính lại; chuẩn vẫn là mọi bill. Vì là tập con, các chỉ số cộng dồn (doanh thu, số bill, giảm giá, bill ≥ ngưỡng /ngày) và tỷ lệ chuyển đổi không so với chuẩn, và ẩn dòng % đạt mục tiêu. Vẫn so: ATV, UPT, % markdown, % bill đạt ngưỡng, Traffic (không đổi theo góc nhìn). Tồn kho, MOH90, markdown hệ thống không đổi.',
     s: 'Augges SlBlM/SlBlD/DmH (chỉ đọc) → data/participation_bills.csv; quy tắc từng CT trong data/campaign_appendix.json.',
     e: 'National Day: Theo timeline 4.218 bill, 10.379.745.000 đ, markdown 1,9%; Bill tham gia CT (mã 674 hoặc quà KX0842) 1.413 chứng từ, 6.293.390.000 đ, markdown 2,0%.'
   },
@@ -1363,8 +1363,10 @@ function card(opts) {
   ].join('');
 }
 
-function additiveLine(focalText, benchText, delta, better, label) {
+const NO_CMP = 'không so chuẩn ở góc nhìn Bill tham gia CT (chuẩn là mọi bill)';
+function additiveLine(focalText, benchText, delta, better, label, noCompare) {
   if (focalText === null) return esc(GAP);
+  if (noCompare) return esc(focalText) + '/ngày · ' + esc(NO_CMP);
   if (benchText === null) return esc(focalText) + '/ngày · so sánh: ' + esc(GAP);
   const badge = deltaPill(delta, better);
   return esc(focalText) + '/ngày so với ' + esc(benchText) + '/ngày'
@@ -1530,8 +1532,8 @@ function render() {
       benchPerDay: base && base.perDay.net,
       delta: netDelta,
       valueText: engine.fmtMoney(focal.net),
-      compare: additiveLine(moneyDay(focal), moneyDay(base), netDelta, 'up', label),
-      target: targetLine(camp, focal, stores)
+      compare: additiveLine(moneyDay(focal), moneyDay(base), netDelta, 'up', label, !!view),
+      target: view ? '' : targetLine(camp, focal, stores)
     }),
     card({
       id: 'bills',
@@ -1544,7 +1546,7 @@ function render() {
       benchPerDay: base && base.perDay.bills,
       delta: billDelta,
       valueText: engine.fmtCount(focal.bills),
-      compare: additiveLine(countDay(focal, 'bills'), countDay(base, 'bills'), billDelta, 'up', label)
+      compare: additiveLine(countDay(focal, 'bills'), countDay(base, 'bills'), billDelta, 'up', label, !!view)
     }),
     card({
       id: 'traffic',
@@ -1572,7 +1574,9 @@ function render() {
       bench: base && base.cr,
       rate: focal.cr,
       valueText: engine.fmtRate(focal.cr),
-      ratio: ptsLine(focal.cr === null ? null : engine.fmtRate(focal.cr), focal.cr, base ? base.cr : null, 'up', label),
+      ratio: view
+        ? (focal.cr === null ? esc(GAP) : esc(engine.fmtRate(focal.cr) + ' · ' + NO_CMP))
+        : ptsLine(focal.cr === null ? null : engine.fmtRate(focal.cr), focal.cr, base ? base.cr : null, 'up', label),
       detail: 'Số bill ÷ traffic, chỉ cửa hàng-ngày có traffic' + (focal.trafficBills !== null ? ' (' + engine.fmtCount(focal.trafficBills) + ' bill ÷ ' + engine.fmtCount(focal.traffic) + ' lượt).' : '.')
     }),
     card({
@@ -1617,7 +1621,7 @@ function render() {
       rateDelta: rateDelta,
       delta: discDelta,
       valueText: engine.fmtMoney(focal.disc),
-      compare: additiveLine(discDay(focal), discDay(base), discDelta, 'down', label),
+      compare: additiveLine(discDay(focal), discDay(base), discDelta, 'down', label, !!view),
       ratio: ptsLine(
         focal.discRate === null ? null : '% markdown ' + engine.fmtRate(focal.discRate),
         focal.discRate,
@@ -1641,7 +1645,7 @@ function render() {
       rateDelta: thPctDelta,
       delta: thDelta,
       valueText: engine.fmtCount(focal.thresholdCount),
-      compare: additiveLine(countDay(focal, 'threshold'), countDay(base, 'threshold'), thDelta, 'up', label),
+      compare: additiveLine(countDay(focal, 'threshold'), countDay(base, 'threshold'), thDelta, 'up', label, !!view),
       ratio: focal.thresholdPct === null ? '' : ptsLine(
         engine.fmtRate(focal.thresholdPct) + ' số chứng từ',
         focal.thresholdPct,
