@@ -1118,6 +1118,15 @@ function ratioLine(focalText, benchText, delta, better, label) {
   return 'so với ' + esc(benchText) + (label ? ' · ' + esc(label) : '') + (badge ? ' ' + badge : '');
 }
 
+function ptsLine(focalText, focalRate, benchRate, better, label) {
+  if (focalText === null) return esc(GAP);
+  if (benchRate === null || benchRate === undefined) return esc(focalText) + ' so với ' + esc(GAP);
+  const pts = (focalRate - benchRate) * 100;
+  const sign = pts > 0 ? '+' : pts < 0 ? '−' : '';
+  const badge = pill(sign + Math.abs(pts).toFixed(1).replace('.', ',') + ' điểm %', toneFor(better, pts));
+  return esc(focalText) + ' so với ' + esc(engine.fmtRate(benchRate)) + (label ? ' · ' + esc(label) : '') + ' ' + badge;
+}
+
 function pairedLine(focalText, benchText, delta, better, label) {
   if (focalText === null) return esc(GAP);
   const badge = benchText === null ? '' : deltaPill(delta, better);
@@ -1271,10 +1280,10 @@ function render() {
       delta: discDelta,
       valueText: engine.fmtMoney(focal.disc),
       compare: additiveLine(discDay(focal), discDay(base), discDelta, 'down', label),
-      ratio: pairedLine(
-        focal.discRate === null ? null : 'Tỷ lệ ' + engine.fmtRate(focal.discRate),
-        base && base.discRate !== null ? engine.fmtRate(base.discRate) : null,
-        rateDelta,
+      ratio: ptsLine(
+        focal.discRate === null ? null : '% markdown ' + engine.fmtRate(focal.discRate),
+        focal.discRate,
+        base ? base.discRate : null,
         'down',
         label
       )
@@ -1293,10 +1302,10 @@ function render() {
       delta: thDelta,
       valueText: engine.fmtCount(focal.thresholdCount),
       compare: additiveLine(countDay(focal, 'threshold'), countDay(base, 'threshold'), thDelta, 'up', label),
-      ratio: focal.thresholdPct === null ? '' : pairedLine(
+      ratio: focal.thresholdPct === null ? '' : ptsLine(
         engine.fmtRate(focal.thresholdPct) + ' số chứng từ',
-        base && base.thresholdPct !== null ? engine.fmtRate(base.thresholdPct) : null,
-        thPctDelta,
+        focal.thresholdPct,
+        base ? base.thresholdPct : null,
         'up',
         label
       )
