@@ -36,7 +36,7 @@
   }
   .kicker {
     margin: 0 0 8px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -253,7 +253,7 @@
   }
   th {
     text-align: right;
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.03em;
     text-transform: uppercase;
     color: var(--muted);
@@ -264,7 +264,7 @@
   }
   th.store, td.store { text-align: left; width: 22%; min-width: 220px; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  td .sub { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; font-weight: 400; }
+  td .sub { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; font-weight: 400; }
   td.store, th.store {
     position: sticky;
     left: 0;
@@ -632,7 +632,9 @@ function createSection1(data) {
       if (visits !== undefined) {
         traffic += visits;
         trafficPairs += 1;
-        if (row) trafficBills += row.bills;
+        // CR luôn = tổng bill (mọi bill, không phụ thuộc góc nhìn) ÷ traffic
+        var allRow = fields(dailyByKey.get(packed));
+        if (allRow) trafficBills += allRow.bills;
       }
       if (!row) continue;
       net += row.net;
@@ -1252,6 +1254,25 @@ function targetLine(camp, metric, stores) {
 
 
 function tipsData() {
+  // Live examples (Sinh nhật Aeon Tân An, its stores, vs YTD) so tip text always matches the cards.
+  const ex = (function () {
+    const camp = DATA.campaigns.find(function (c) { return c.id === '2490005'; });
+    if (!camp) return null;
+    const f = engine.metrics(engine.campaignPairs(camp, camp.storeIdxs), null);
+    const b = engine.metrics(engine.ytdPairs(camp, camp.storeIdxs), null);
+    if (f.cr === null || b.cr === null) return null;
+    const pts = (f.cr - b.cr) * 100;
+    return {
+      f: f, b: b,
+      pts: (pts >= 0 ? '+' : '−') + Math.abs(pts).toFixed(1).replace('.', ',') + ' điểm %'
+    };
+  })();
+  const cnt = engine.fmtCount;
+  const crEx = ex ? 'Aeon Tân An: ' + cnt(ex.f.trafficBills) + ' bill ÷ ' + cnt(ex.f.traffic) + ' lượt = ' + engine.fmtRate(ex.f.cr) +
+    '; YTD ' + cnt(ex.b.trafficBills) + ' bill ÷ ' + cnt(ex.b.traffic) + ' lượt = ' + engine.fmtRate(ex.b.cr) + ' → ' + ex.pts + '.' : 'thiếu dữ liệu';
+  const trEx = ex ? 'Aeon Tân An: đủ ' + ex.f.trafficPairs + '/' + ex.f.pairCount + ' cửa hàng-ngày, ' + cnt(ex.f.traffic) + ' lượt = ' + engine.fmtPerDayCount(ex.f.perDay.traffic) +
+    '/ngày. YTD có ' + ex.b.trafficPairs + '/' + ex.b.pairCount + ' cửa hàng-ngày, ' + cnt(ex.b.traffic) + ' lượt = ' + engine.fmtPerDayCount(ex.b.perDay.traffic) + '/ngày.' : 'thiếu dữ liệu';
+  const ptsEx = ex ? 'Chuyển đổi ' + engine.fmtRate(ex.f.cr) + ' − ' + engine.fmtRate(ex.b.cr) + ' = ' + ex.pts + ' (không phải % thay đổi).' : 'thiếu dữ liệu';
   return {
   moh90: {
     f: 'Tồn kho ngày đầu chương trình ÷ doanh thu thuần trung bình 1 tháng của 90 ngày trước đó (tổng 90 ngày ÷ 3). Tồn lấy mẫu Augges gần nhất đúng ngày bắt đầu hoặc trước đó. Chưa đủ 90 ngày thì dùng số ngày có dữ liệu, quy về 1 tháng và ghi x/90 ngày. Không so với chuẩn.',
@@ -1271,12 +1292,12 @@ function tipsData() {
   cr: {
     f: 'Tỷ lệ chuyển đổi = số bill ÷ traffic. Chỉ tính các cửa hàng-ngày có số traffic > 0; bill của ngày thiếu traffic bị bỏ khỏi tử số. So với chuẩn bằng điểm %.',
     s: 'Bill: Power BI [Số Bill]. Traffic: Palexy (TSN_Database.Palexy_Store_Daily_Visits, cùng nguồn Traffic_all của Power BI).',
-    e: 'Aeon Tân An: 109 bill ÷ 741 lượt = 14,7%; YTD 2.017 bill ÷ 15.084 lượt = 13,4% → +1,3 điểm %.'
+    e: crEx
   },
   traffic: {
     f: 'Traffic = tổng lượt khách Palexy trên các cửa hàng-ngày có số. Ngày có 0 lượt hoặc không có dòng coi là thiếu, không điền bù. Dòng phủ ghi số cửa hàng-ngày có traffic / tổng cửa hàng-ngày. /ngày = tổng ÷ số ngày lịch trong kỳ, nên kỳ phủ thiếu sẽ thấp hơn thực tế.',
     s: 'Palexy (TSN_Database.Palexy_Store_Daily_Visits). Toàn hệ thống thiếu 01–29/04 và 20/06.',
-    e: 'Aeon Tân An: đủ 16/16 ngày, 741 lượt = 46,3/ngày. YTD chỉ có 238/268 ngày, 15.084 lượt = 56,3/ngày.'
+    e: trEx
   },
   threshold: {
     f: 'Đếm từng chứng từ có doanh thu thuần ≥ ngưỡng. % = số chứng từ đạt ngưỡng ÷ tổng số chứng từ trong kỳ (không chia cho Số bill Power BI). /ngày = số đạt ÷ số ngày lịch.',
@@ -1306,7 +1327,7 @@ function tipsData() {
   pts: {
     f: 'Điểm % = tỷ lệ kỳ này − tỷ lệ chuẩn (trừ thẳng, không phải % thay đổi). Dùng cho % markdown, % bill đạt ngưỡng, tỷ lệ chuyển đổi, markdown hệ thống.',
     s: 'Tính trên trang.',
-    e: 'Chuyển đổi 14,7% − 13,4% = +1,3 điểm % (không phải +10%).'
+    e: ptsEx
   },
   gwp: {
     f: 'Chi phí GWP = số quà đã phát × giá bán lẻ. Số quà = tổng So_Luong các dòng giá 0 (Gia_Ban = 0, Md trống, SL > 0) có tên hàng chứa mã quà, trong ngày và cửa hàng của chương trình. Giá = DmH.Gia_Bl của mã bán cùng article (mã quà trong DmH có giá 0). Không phải giá vốn.',
